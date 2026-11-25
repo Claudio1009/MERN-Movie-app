@@ -1,96 +1,224 @@
 # MERN Movie App
-[![Ask DeepWiki](https://devin.ai/assets/askdeepwiki.png)](https://deepwiki.com/Claudio1009/MERN-Movie-app)
 
-This is a full-stack movie application built with the MERN stack (MongoDB, Express.js, React, Node.js). It provides a platform for users to browse, search, and review movies. The application features a comprehensive admin panel for managing movies, genres, and user comments, complete with a statistical dashboard.
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Express](https://img.shields.io/badge/Express-5-000000?logo=express)
+![MongoDB](https://img.shields.io/badge/MongoDB-Database-47A248?logo=mongodb)
+![Redux](https://img.shields.io/badge/Redux-Toolkit-764ABC?logo=redux)
+![Tailwind](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss)
+
+## Overview
+
+A full-stack movie discovery and management platform built with MongoDB, Express, React and Node.js. Users can browse movies, watch trailers, submit reviews and manage their profiles. An administrative dashboard supports movie and genre management and review moderation.
+
+### Project highlights
+
+- 22 REST API endpoints across four route modules.
+- Three Mongoose models and embedded review documents.
+- Two user roles, with server-side authorization for administrative operations.
+- JWT authentication via HttpOnly cookies and centralized frontend state using Redux Toolkit and RTK Query.
+- Modular routes, controllers, models, middleware and utilities.
 
 ## Features
 
-### User Features
-- **Authentication:** Secure user registration and login functionality.
-- **Movie Browsing:** View a comprehensive library of movies.
-- **Search & Filter:** Find movies by title, genre, or release year.
-- **Sorting:** Organize movie lists by new releases, top-rated, or random.
-- **Movie Details:** Access detailed information for each movie, including plot, cast, and release year.
-- **Trailer Playback:** Watch movie trailers directly within the app.
-- **Reviews and Ratings:** Read and submit comments and ratings for movies.
-- **Profile Management:** Update personal user profile details.
+**Users:** Registration, login, logout, movie browsing and filtering, cast and release information, trailers, ratings, reviews, duplicate review detection and profile management.
 
-### Admin Features
-- **Admin Dashboard:** A dedicated dashboard displaying key statistics like total users, movies, and comments.
-- **Movie Management:** Full CRUD (Create, Read, Update, Delete) functionality for movies.
-- **Genre Management:** Create, update, and delete movie genres.
-- **Comment Moderation:** View and delete user comments across all movies.
-- **Secure Routes:** Access to admin functionalities is protected and restricted to admin users.
+**Administrators:** Dashboard, movie and genre CRUD, review moderation, user listing and poster uploads. Administrative movie and genre operations are protected by backend middleware.
 
-## Tech Stack
+## Technology stack
 
-### Frontend
-- **React**: A JavaScript library for building user interfaces.
-- **Redux Toolkit**: For predictable state management, including RTK Query for data fetching and caching.
-- **React Router**: For declarative routing in the React application.
-- **Tailwind CSS**: A utility-first CSS framework for rapid UI development.
-- **Vite**: A modern frontend build tool that significantly improves the development experience.
+| Layer | Technologies |
+|---|---|
+| Frontend | React 19, JavaScript, Vite, React Router 7 |
+| Styling | Tailwind CSS 4 |
+| State and API | Redux Toolkit, RTK Query |
+| Backend | Node.js, Express 5 |
+| Persistence | MongoDB, Mongoose 9 |
+| Authentication | JWT, bcryptjs, HttpOnly cookies |
+| Uploads | Multer, local disk |
+| Development | Nodemon, Concurrently, ESLint |
 
-### Backend
-- **Node.js**: A JavaScript runtime environment.
-- **Express.js**: A minimal and flexible Node.js web application framework.
-- **MongoDB**: A NoSQL database for storing application data.
-- **Mongoose**: An ODM (Object Data Modeling) library for MongoDB and Node.js.
-- **JWT (JSON Web Tokens)**: For securing user authentication and API routes.
-- **Multer**: A middleware for handling `multipart/form-data`, used for file uploads.
+## Architecture
 
-## Getting Started
+```mermaid
+flowchart TD
+    A[React client] --> B[Redux Toolkit / RTK Query]
+    B --> C[Express REST API]
+    C --> D[Authentication and authorization]
+    D --> E[Controllers]
+    C --> E
+    E --> F[Mongoose models]
+    F --> G[(MongoDB)]
+    C --> H[Multer upload handler]
+    H --> I[Local file storage]
+```
 
-Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
+The frontend communicates with versioned REST endpoints. During development, Vite proxies API and uploaded image requests to port 3000.
 
-### Prerequisites
+## Database design
 
-- Node.js and npm
-- MongoDB (running locally or a cloud instance like MongoDB Atlas)
+```mermaid
+erDiagram
+    USER ||--o{ REVIEW : writes
+    GENRE ||--o{ MOVIE : categorizes
+    MOVIE ||--o{ REVIEW : embeds
+```
 
-### Installation & Setup
+| Model | Key fields |
+|---|---|
+| User | username, unique email, password, isAdmin, timestamps |
+| Movie | name, image, year, genre reference, detail, cast, reviews, numReviews, trailer, timestamps |
+| Genre | Movie category |
+| Review (embedded) | name, user reference, rating, comment, timestamps |
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/claudio1009/mern-movie-app.git
-    cd mern-movie-app
-    ```
+Reviews are embedded in movie documents, simplifying retrieval of movie details and associated reviews. A separate collection could be preferable at larger review volumes.
 
-2.  **Install root dependencies:**
-    ```bash
-    npm install
-    ```
+## Authentication and authorization
 
-3.  **Setup the Backend:**
-    - Navigate to the backend directory:
-      ```bash
-      cd backend
-      ```
-    - Install backend dependencies:
-      ```bash
-      npm install
-      ```
-    - Create a `.env` file in the `backend` directory and add the following variables:
-      ```env
-      MONGO_URL=your_mongodb_connection_string
-      JWT_SECRET=your_jwt_secret_key
-      PORT=3000
-      ```
+JWTs are issued after authentication and stored in HttpOnly cookies with SameSite Strict and a 30-day lifetime. The Secure flag is enabled outside development. Password hashing uses bcryptjs. Protected requests pass through authentication middleware; administrative routes additionally check the user's role.
 
-4.  **Setup the Frontend:**
-    - Navigate to the frontend directory from the root:
-      ```bash
-      cd frontend
-      ```
-    - Install frontend dependencies:
-      ```bash
-      npm install
-      ```
-    - The frontend is configured to proxy API requests to the backend server at `http://localhost:3000`.
+## REST API reference
 
-5.  **Run the Application:**
-    - From the project's root directory, run the following command to start both the frontend and backend servers concurrently:
-      ```bash
-      npm run fullstack
-      ```
-    - The backend will run on `http://localhost:3000` and the frontend will be accessible at `http://localhost:5173` (or another port specified by Vite).
+Base URL: `http://localhost:3000/api/v1`
+
+| Method | Endpoint | Access |
+|---|---|---|
+| POST | /users | Public |
+| POST | /users/auth | Public |
+| POST | /users/logout | Public |
+| GET | /users | Admin |
+| GET | /users/profile | User |
+| PUT | /users/profile | User |
+| GET | /movies/all-movies | Public |
+| GET | /movies/specific-movie/:id | Public |
+| GET | /movies/new-movies | Public |
+| GET | /movies/top-movies | Public |
+| GET | /movies/random-movies | Public |
+| POST | /movies/:id/reviews | User |
+| POST | /movies/create-movie | Admin |
+| PUT | /movies/update-movie/:id | Admin |
+| DELETE | /movies/delete-movie/:id | Admin |
+| DELETE | /movies/delete-comment | Admin |
+| GET | /genre/genres | Public |
+| GET | /genre/:id | Public |
+| POST | /genre | Admin |
+| PUT | /genre/:id | Admin |
+| DELETE | /genre/:id | Admin |
+| POST | /upload | Public |
+
+The upload endpoint accepts multipart/form-data using an image field and stores files locally.
+
+### Example requests
+
+```bash
+curl http://localhost:3000/api/v1/movies/all-movies
+
+curl -c cookies.txt -X POST http://localhost:3000/api/v1/users/auth \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"your-password"}'
+
+curl -b cookies.txt -X POST http://localhost:3000/api/v1/movies/MOVIE_ID/reviews \
+  -H "Content-Type: application/json" \
+  -d '{"rating":5,"comment":"Great movie!"}'
+```
+
+Replace MOVIE_ID with an existing movie document ID.
+
+## Engineering decisions
+
+- **Separation of concerns:** Routes, controllers, middleware and persistence models are organized into dedicated modules.
+- **Embedded reviews:** Movie details and reviews can be retrieved together.
+- **State management:** Redux Toolkit and RTK Query centralize shared state, API requests and caching.
+- **Movie discovery:** Recently added movies (up to 20), popular movies (up to 10, sorted by review count), and random selection using MongoDB's $sample aggregation stage (up to 10).
+- **Authorization:** Administrative operations are enforced on the server, not solely through frontend route restrictions.
+
+## Project structure
+
+```text
+MERN-Movie-app/
+├── backend/
+│   ├── config/
+│   ├── controllers/
+│   ├── middlewares/
+│   ├── models/
+│   ├── routes/
+│   ├── utils/
+│   └── index.js
+├── frontend/
+│   ├── src/
+│   │   ├── assets/
+│   │   ├── component/
+│   │   ├── pages/
+│   │   │   ├── Admin/
+│   │   │   ├── Auth/
+│   │   │   ├── Movies/
+│   │   │   └── User/
+│   │   ├── redux/
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── package.json
+│   └── vite.config.js
+├── uploads/
+├── package.json
+└── README.md
+```
+
+## Getting started
+
+Prerequisites: Git, Node.js 22.12+ (recommended), npm and a local or hosted MongoDB instance.
+
+```bash
+git clone https://github.com/Claudio1009/MERN-Movie-app.git
+cd MERN-Movie-app
+npm install
+cd frontend
+npm install
+cd ..
+```
+
+Create a `.env` file in the repository root:
+
+```dotenv
+PORT=3000
+MONGO_URL=mongodb://127.0.0.1:27017/movie_app
+JWT_SECRET=replace_with_a_long_random_secret
+NODE_ENV=development
+```
+
+Never commit credentials or secrets.
+
+Start both services from the repository root:
+
+```bash
+npm run fullstack
+```
+
+Frontend: http://localhost:5173  
+Backend: http://localhost:3000
+
+Alternatively, run `npm run backend` and `npm run frontend` in separate terminals.
+
+## Code quality
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
+
+Automated backend unit and integration tests are not currently included.
+
+## Current limitations and roadmap
+
+- Add automated unit and integration tests.
+- Add server-side pagination, filtering and database indexes.
+- Strengthen request and upload validation, require upload authentication and enforce file size limits.
+- Add rate limiting and cloud-based image storage.
+- Persist average ratings in the movie schema.
+- Make duplicate review prevention atomic.
+- Add Docker, OpenAPI documentation and CI/CD.
+
+These are future improvements, not implemented features. This project is a development portfolio application, not a production-ready service.
+
+## Author
+
+Claudiu Marius Ciupitu — [GitHub](https://github.com/Claudio1009)
